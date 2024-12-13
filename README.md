@@ -1,63 +1,167 @@
-# Rune swap Project
+# Rune/BRC20 Marketplace
 
-Welcome to the Rune swap Project, a decentralized application (dApp) built in the Bitcoin Rune space. This project leverages React and the Bitcoin CLI to facilitate the swaping of runes. Explore the repository to learn more about how it works and how you can contribute!
+Welcome to the **Rune/BRC20 Marketplace**, a decentralized application (dApp) built in the Bitcoin space. This project leverages **React** and **Bitcoin CLI** to facilitate the swapping of Rune/BRC20 tokens, providing an efficient platform for users to interact with pools and exchange assets.
+
+Explore this repository to learn more about how it works, how it handles transaction processes, and how you can contribute!
 
 ## Introduction
 
-The Rune swap Project is designed to provide a seamless and secure way to swap runes within the Bitcoin ecosystem. By using this dApp, users can ensure their runes are permanently removed from circulation, enhancing the value and scarcity of remaining runes.
+This project allows users to create **Rune/BRC20 token pair pools** and swap tokens within them. When a user swaps, the pool gets locked to prevent others from accessing it until the operation is completed.
 
-## Features
+### Key Features:
 
-- **Decentralized:** Built on the Bitcoin blockchain for maximum security and transparency.
-- **User-Friendly:** Easy-to-use interface developed with React.
-- **Efficient:** Utilizes the Bitcoin CLI for efficient and reliable operations.
-- **Open Source:** Fully open-source and available for community contributions.
+1. **Pool Locking:** When a user performs a swap, the pool lock status is updated to prevent concurrent operations.
+2. **UTXO Management:** Ensures that used transaction outputs (UTXOs) are stored and tracked to avoid confusion when fetching UTXOs for transactions.
+3. **BRC20 Inscription Validation:** Before transferring BRC20 tokens, it checks if the address holds transferable inscription data.
 
-1. Transfer claim amount of rune token from User wallet to Receiver wallet.
+## Project Setup
 
-   - Get rune utxos and btc utxos in user wallet.
+### Prerequisites
 
-   - Build PSBT with user rune token and utxo balance as input and OP_RETURN value and claim amount of rune token, return rune token, change utxo as output using user wallet publickey, address, and receiver wallet address.
+Before running the project, ensure that you have the following dependencies installed:
 
-   - Send and Sign PSBT with user wallet.
+- **Node.js** (>= v18)
+- **npm** or **yarn**
 
-2. After confirmed transaction, Transfer and swap rune token from Receiver wallet to swaping wallet.
+### Install Dependencies
 
-   - Get rune utxos and btc utxos in receiver wallet.
-
-   - Build PSBT with receiver rune token and utxo balance as input and OP_RETURN value and claim amount of rune token, return rune token, change utxo as output using reciver wallet WIF privatekey, address, and swaping wallet address.
-     (At that time, set OP_RETURN as invalid)
-
-   - Sign PSBT with receiver wallet.
-
-P.S. All necessary values are in network.config.ts.
-
-3. **Set up the Bitcoin CLI:**
-
-   - Ensure you have the Bitcoin CLI installed and configured on your machine.
-   - Update the `.env` file with your Bitcoin CLI configuration.
-
-4. **Start the application:**
+1. Clone the repository:
    ```bash
-   npm start
+   git clone https://github.com/ptc-bink/rune-brc20-marketplace
    ```
 
-## Usage
+2. Navigate to the project directory:
+   ```bash
+   cd rune-brc20-marketplace
+   ```
 
-1. **Access the Application:**
-   - Open your browser and navigate to `https://stonefaceords.com/`.
-2. **swap Runes:**
-   - Follow the on-screen instructions to swap your runes securely.
-   - Confirm the transaction through the Bitcoin CLI.
+3. Install the required dependencies:
+   ```bash
+   npm install
+   ```
 
-## Contributing
+### Development Scripts
 
-We welcome contributions from the community! To contribute:
+The project comes with several useful npm scripts for development, building, and managing the project.
 
-1. Fork the repository.
-2. Create a new branch with your feature or bugfix.
-3. Submit a pull request with a detailed description of your changes.
+- **`npm run dev`**: Starts the development server using `ts-node-dev` to watch for changes in TypeScript files.
+  ```bash
+  npm run dev
+  ```
 
-## License
+- **`npm run build`**: Compiles the TypeScript code into JavaScript using the `tsc` (TypeScript Compiler).
+  ```bash
+  npm run build
+  ```
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+- **`npm run check-types`**: Runs TypeScript type-checking to ensure there are no type errors in the project.
+  ```bash
+  npm run check-types
+  ```
+
+- **`npm run check-format`**: Checks the code formatting using **Prettier**.
+  ```bash
+  npm run check-format
+  ```
+
+- **`npm run format`**: Automatically formats the code according to the Prettier configuration.
+  ```bash
+  npm run format
+  ```
+
+### Project Structure
+
+- **`src/`**: Contains all the source code for the application.
+- **`network.config.ts`**: Configuration for network-related values (e.g., RPC URLs, wallet addresses).
+- **`models/`**: Contains database models for swap history, used transactions, and pool information.
+- **`utils/`**: Contains utility functions like handling BRC20 inscriptions, filtering UTXOs, etc.
+
+### Configuration
+
+All necessary configuration values, such as API keys, addresses, and network details, are located in **`network.config.ts`**.
+
+### Example Code Snippets
+
+#### Pool Locking:
+
+When a user performs a swap, the pool lock status is updated to prevent concurrent swaps.
+
+```javascript
+// Update pool lock status as false if pool and lockedByAddress match
+export const updatePoolLockStatus = async (
+  poolAddress: string,
+  tokenType: string,
+  userAddress: string
+) => {
+  // Implementation as described above
+};
+```
+
+#### UTXO Management:
+
+To avoid using already claimed UTXOs, we store used transaction information and filter out used UTXOs when fetching them:
+
+```javascript
+// Model to store used transaction information
+const UsedTxInfo = new mongoose.Schema({
+  txid: { type: String, required: true },
+  confirmedTx: { type: String, required: true },
+  createdAt: { type: Date, default: new Date(new Date().toUTCString()) },
+});
+const UsedTxInfoModal = mongoose.model("UsedTxInfo", UsedTxInfo);
+export default UsedTxInfoModal;
+```
+
+#### BRC20 Inscription Validation:
+
+For BRC20 token transfers, it checks if the user's address has the required transferable inscription data:
+
+```javascript
+export const getBrc20TransferableInscriptionUtxoByAddress = async (address: string, ticker: string) => {
+  const url = `${OPENAPI_UNISAT_URL}/v1/indexer/address/${address}/brc20/${ticker}/transferable-inscriptions`;
+  const config = {
+    headers: {
+      Authorization: `Bearer ${OPENAPI_UNISAT_TOKEN}`,
+    },
+  };
+
+  const inscriptionList = (await axios.get(url, config)).data.data.detail;
+
+  return inscriptionList;
+};
+```
+
+
+#### Swap Hisotry Model:
+
+```javascript
+const SwapHistory = new mongoose.Schema({
+	poolAddress: { type: String, required: true },
+	userAddress: { type: String, required: true },
+	tokenType: { type: String, required: true },
+	txId: { type: String, required: true },
+	tokenAmount: { type: Number, required: true },
+	btcAmount: { type: Number, required: true },
+	swapType: { type: Number, required: true },
+	createdAt: { type: Date, default: new Date(new Date().toUTCString()) },
+});
+
+const SwapHistoryModal = mongoose.model("SwapHistory", SwapHistory);
+
+export default SwapHistoryModal;
+```
+
+## Dependencies
+
+The project uses the following dependencies:
+
+- **`@bitcoinerlab/secp256k1`**: A library for elliptic curve cryptography, used in Bitcoin transactions.
+- **`@mempool/mempool.js`**: A library for interacting with Bitcoin's mempool.
+- **`@ordjs/runestone`**: A library for interacting with Rune tokens on the Bitcoin network.
+- **`axios`**: Promise-based HTTP client for making API requests.
+- **`mongoose`**: MongoDB object modeling tool.
+- **`express`**: Web framework for Node.js, used for handling HTTP requests.
+
+## Contribution
+
+We welcome contributions to improve the functionality and security of this project. To contribute, please fork the repository, make your changes, and create a pull request. Be sure to follow our coding standards and include tests for your changes.
